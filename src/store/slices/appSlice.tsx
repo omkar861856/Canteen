@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { apiUrl } from '../../Layout';
+
 // to extract kitchenId from url
 function getFirstPathOrEndpoint(pathname:string) {
   // Remove leading and trailing slashes, then split the pathname
@@ -10,7 +11,6 @@ function getFirstPathOrEndpoint(pathname:string) {
 }
 
 const kitchenId = getFirstPathOrEndpoint(location.pathname)
-
 
 interface AppState {
   kitchenNumber:string;
@@ -47,7 +47,7 @@ export const connectKitchen = createAsyncThunk(
 
 export const fetchKitchenStatus = createAsyncThunk(
   'kitchen/fetchKitchenStatus',
-  async (kitchenId: string | undefined, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     if (!kitchenId) {
       return rejectWithValue('Kitchen ID is required');
     }

@@ -26,6 +26,7 @@ import PhoneEnabledIcon from '@mui/icons-material/PhoneEnabled';
 import PhoneDisabledIcon from '@mui/icons-material/PhoneDisabled';
 import GoogleTranslate from './components/GoogleTranslate';
 import { cacheAudioFile } from './utils/cacheAudioFile';
+import { getIsLoggedInStatus } from './store/slices/authSlice';
 
 const audioUrl = 'public/simple-notification-152054.mp3'
 cacheAudioFile(audioUrl);
@@ -71,37 +72,24 @@ export default function Layout({ children }: LayoutProps) {
   const [value, setValue] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const isInitialized = useRef(false); // To ensure logic runs only once per session
   const socketRef = useRef(socket);
   const [socketConnection, setSocketConnection] = useState(false)
   const location = useLocation();
   const dispatch = useAppDispatch()
-  const [menuInvisible] = useState(false)
-  const [cartInvisible] = useState(false)
-  const [ordersInvisible] = useState(false)
+  const { notifications } = useAppSelector(state => state.notifications)
+  const [cartInvisible, setCartInvisible] = useState(true)
+  const [ordersInvisible, setOrdersInvisible] = useState(false)
   const { isLoggedIn, phone } = useAppSelector(state => state.auth)
   const { kitchenStatus, kitchenNumber, kitchenId } = useAppSelector(state => state.app)
+  const cart = useAppSelector(state => state.cart)
+
+  useEffect(() => {
+    dispatch(fetchKitchenStatus())
+    dispatch(getIsLoggedInStatus())
+  }, [location.pathname])
 
 
-  // const handleBadgeVisibility = () => {
-  //   setInvisible(!invisible);
-  // };
-
-  // function getFirstPathOrEndpoint(pathname:string) {
-  //   // Remove leading and trailing slashes, then split the pathname
-  //   const parts = pathname.replace(/^\/|\/$/g, '').split('/');
-  //   // Return the first part of the split array
-  //   return parts[0];
-  // }
-
-  // const result = getFirstPathOrEndpoint(location.pathname)
-
-  // console.log(result)
-
-  useEffect(()=>{
-    dispatch(fetchKitchenStatus(kitchenId))
-  },[])
-
+  // bottom nav active state depending upon url-endpoing
   useEffect(() => {
     // Use a switch statement to set the value based on the path
     switch (location.pathname) {
@@ -121,45 +109,20 @@ export default function Layout({ children }: LayoutProps) {
         setValue(0); // Default value for unknown paths
         break;
     }
+
   }, [location.pathname]);
 
-  // // Show notification with sound
-  // const showNotification = (message: string) => {
-  //   if (Notification.permission === 'granted') {
-  //     const notification = new Notification("New Notification", {
-  //       body: message,
-  //       icon: 'path_to_your_icon/notification-icon.png', // Optional icon
-  //     });
-
-  //     playNotificationSound(); // Play sound when notification appears
-
-  //     notification.onclick = () => {
-  //       console.log("Notification clicked!");
-  //     };
-  //   }
-  // };
-
-  // Clear stale local storage once per session
   useEffect(() => {
-    if (!isInitialized.current) {
-      isInitialized.current = true;
 
-      // Clear local storage only if not cleared for this session
-      if (!sessionStorage.getItem("localStorageCleared")) {
-        localStorage.clear();
-        sessionStorage.setItem("localStorageCleared", "true");
-        console.log("Local storage cleared once for this session.");
-      }
+    if (cart.length !== 0) {
+      setCartInvisible(false)
+    } else {
+      setCartInvisible(true)
     }
 
-    return () => {
-      console.log("Layout unmounting (clean-up logic if required).");
-    };
-  }, []);
+  }, [cart])
 
-  // to fetch the kitchen state 
-
-
+  // push notifications effect
   useEffect(() => {
     if (ref.current) {
       ref.current.ownerDocument.body.scrollTop = 0;
@@ -176,6 +139,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [value]);
 
 
+  // socket effect
   useEffect(() => {
     const socketInstance = socketRef.current;
 
@@ -186,22 +150,24 @@ export default function Layout({ children }: LayoutProps) {
     });
 
     // Listen for new menu items
-    socketInstance.on('menuItemCreated', (menuItem) => {
-      console.log('New menu item:', menuItem);
+    socketInstance.on('menuNotification', (notification) => {
+      console.log('Menu Notification', notification);
+      dispatch(addNotification({ type: "menu", data: notification, date: new Date().toISOString() }))
       playNotificationSound(audioUrl)
       // Update UI to display the new menu item
     });
 
     // Listen for order completion
-    socketInstance.on('orderCompleted', (data) => {
+    socketInstance.on('orderNotification', (data) => {
       console.log('Order completed:', data);
       playNotificationSound(audioUrl)
-      dispatch(addNotification({ type: "order", data: `Your order no ${data.orderId} completed` }))
+      dispatch(addNotification({ type: "order", data: data.message, date: new Date().toISOString() }))
     });
 
     // Listen for kitchen status updates
-    socketInstance.on('kitchenStatusUpdated', (status) => {
+    socketInstance.on('kitchenStatus', (status) => {
       console.log('Kitchen status updated:', status);
+      dispatch(addNotification({ type: "kitchenStatus", data: `Kitchen: ${status ? "online" : "offline"}`, date: new Date().toISOString() }))
       dispatch(setKitchenStatus(status))
       // Update UI to reflect kitchen status
     });
@@ -209,20 +175,32 @@ export default function Layout({ children }: LayoutProps) {
     // Clean up listeners on unmount
     return () => {
       setSocketConnection(false)
-
       socketInstance.off("connect");
-      socketInstance.off("menuItemCreated");
-      socketInstance.off('orderCompleted');
-      socketInstance.off('kitchenStatusUpdated');
-
-
+      socketInstance.off("menuNotification");
+      socketInstance.off('orderNotification');
+      socketInstance.off('kitchenStatus');
     };
   }, [dispatch, socketConnection]);
 
+  useEffect(() => {
+
+    const orderNotifications = notifications.filter(notification => notification.type === "order");
+
+    if (orderNotifications.length !== 0) {
+
+      setOrdersInvisible(false)
+
+    } else {
+      setOrdersInvisible(true)
+    }
+
+
+  }, [notifications])
+
+  // Call Kitchen
   function makeCall(phoneNumber: string) {
     window.location.href = `tel:+91${phoneNumber}`;
   }
-
   return (
     <Box sx={{ pb: 7 }} ref={ref}>
       <CssBaseline />
@@ -268,9 +246,7 @@ export default function Layout({ children }: LayoutProps) {
           }}
         >
           <BottomNavigationAction onClick={() => navigate(`/${kitchenId}`)} label="Menu" icon={
-            <Badge color="primary" variant="dot" invisible={menuInvisible}>
-              <ImportContactsIcon />
-            </Badge>
+            <ImportContactsIcon />
           } />
           <BottomNavigationAction onClick={() => navigate(`/${kitchenId}/cart`)} label="Cart" icon={<Badge color="primary" variant="dot" invisible={cartInvisible}><ShoppingCartIcon /></Badge>} />
           <BottomNavigationAction onClick={() => navigate(`/${kitchenId}/orders`)} label="Orders" icon={<Badge color="primary" variant="dot" invisible={ordersInvisible}><RamenDiningIcon /></Badge>} />
@@ -282,17 +258,15 @@ export default function Layout({ children }: LayoutProps) {
   );
 }
 
+
 const NotificationIconWithMenu = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
-  const notificationss = useAppSelector(state => state.notifications)
-  const notifications = notificationss.notifications
-  const dispatch = useAppDispatch();
+  const [selectedNotification, setSelectedNotification] = useState<String | null>(null);
 
-  // const notifications = [
-  //   "New order received!",
-  //   "Payment failed!",
-  // ];
+  const notificationss = useAppSelector(state => state.notifications);
+  const notifications = notificationss.notifications;
+  const dispatch = useAppDispatch();
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -300,24 +274,22 @@ const NotificationIconWithMenu = () => {
 
   const handleClose = () => {
     setAnchorEl(null);
-    handleClear()
+    handleClear();
   };
 
-  const handleSnackbarOpen = () => {
+  const handleSnackbarOpen = (notification: String) => {
+    setSelectedNotification(notification);
     setOpenSnackbar(true);
   };
 
   const handleSnackbarClose = () => {
     setOpenSnackbar(false);
-    handleClear()
+    setSelectedNotification(null);
   };
 
-
-  function handleClear() {
-
-    dispatch(clearNotifications())
-
-  }
+  const handleClear = () => {
+    dispatch(clearNotifications());
+  };
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", padding: 2 }}>
@@ -335,13 +307,18 @@ const NotificationIconWithMenu = () => {
         }}
       >
         {notifications.length > 0 ? (
-
           notifications.map((notification, index) => (
-            <MenuItem key={index} onClick={handleSnackbarOpen}>
+            <MenuItem sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }} key={index} onClick={() => handleSnackbarOpen(notification.data)}>
               <Typography variant="body2">{notification.data}</Typography>
+              <Typography variant="caption" sx={{ ml: 1 }}>
+                {new Date(notification.date).toLocaleString()}
+              </Typography>
             </MenuItem>
           ))
-
         ) : (
           <MenuItem>
             <Typography variant="body2">No new notifications</Typography>
@@ -351,12 +328,13 @@ const NotificationIconWithMenu = () => {
       <Snackbar
         open={openSnackbar}
         onClose={handleSnackbarClose}
-        message="Notification clicked!"
+        message={selectedNotification}
         autoHideDuration={3000}
       />
     </Box>
   );
 };
+
 
 function FeedbackIcon() {
 

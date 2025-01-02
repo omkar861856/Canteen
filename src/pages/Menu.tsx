@@ -84,10 +84,9 @@ const Menu: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { kitchenStatus } = useAppSelector((state) => state.app); // Access kitchenStatus from the store
   const { inventory } = useAppSelector(state => state.menu)
+  const {notifications} = useAppSelector(state=>state.notifications)
   const dispatch = useAppDispatch()
 
-
-  
   useEffect(() => {
     if (kitchenStatus) {
       (async () => {
@@ -102,7 +101,7 @@ const Menu: React.FC = () => {
     } else {
       setLoading(false); // Ensure loading state ends even if kitchen is offline
     }
-  }, [kitchenStatus, dispatch]);
+  }, [kitchenStatus, dispatch, notifications]);
 
   if (loading) {
     return (
@@ -114,10 +113,12 @@ const Menu: React.FC = () => {
 
   const categorizedInventory = inventory.reduce(
     (acc: Record<string, InventoryItem[]>, item) => {
-      if (!acc[item.category]) {
-        acc[item.category] = [];
+      if (item.availability) { // Check if the item is available
+        if (!acc[item.category]) {
+          acc[item.category] = [];
+        }
+        acc[item.category].push(item);
       }
-      acc[item.category].push(item);
       return acc;
     },
     {}

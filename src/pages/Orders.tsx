@@ -12,17 +12,23 @@ import {
 import { useAppSelector, useAppDispatch } from "../store/hooks/hooks";
 import { Fragment } from "react";
 import { fetchOrdersByPhone } from "../store/slices/ordersSlice";
+import axios from "axios";
+import { apiUrl } from "../Layout";
+import BillComponent from "../components/BillComponent";
+import html2pdf from "html2pdf.js";
+import ReactDOMServer from "react-dom/server";
 
 const Orders = () => {
   const { orders } = useAppSelector((state) => state.orders);
   const dispatch = useAppDispatch();
-  const {notifications} = useAppSelector(state=>state.notifications)
+  const { notifications } = useAppSelector(state => state.notifications)
+  const {firstName, lastName} = useAppSelector(state=>state.auth)
 
 
   const [pendingCurrentPage, setPendingCurrentPage] = useState(1);
   const [completedCurrentPage, setCompletedCurrentPage] = useState(1);
   const ordersPerPage = 5;
-  const {phone} =  useAppSelector(state=>state.auth)
+  const { phone } = useAppSelector(state => state.auth)
 
   // Fetch orders on mount or userId change
   useEffect(() => {
@@ -52,7 +58,7 @@ const Orders = () => {
       <Typography variant="h5" gutterBottom>
         {title}
       </Typography>
-      {orderList.map((order:any) => {
+      {orderList.map((order: any) => {
         const {
           orderId,
           status,
@@ -61,9 +67,10 @@ const Orders = () => {
           completedAt,
           orderedAt,
           cabinName,
-          specialInstructions, 
-          extraInfo
+          specialInstructions,
+          extraInfo,
         } = order;
+
 
         // const { cabinName, extraInfo, specialInstructions } = addressDetails || {};
 
@@ -74,13 +81,12 @@ const Orders = () => {
               padding: 2,
               marginBottom: 2,
               boxShadow: 3,
-              borderLeft: `6px solid ${
-                status === "pending"
+              borderLeft: `6px solid ${status === "pending"
                   ? "orange"
                   : status === "completed"
-                  ? "green"
-                  : "red"
-              }`,
+                    ? "green"
+                    : "red"
+                }`,
             }}
           >
             <Typography variant="body1">
@@ -94,8 +100,8 @@ const Orders = () => {
                     status === "pending"
                       ? "orange"
                       : status === "completed"
-                      ? "green"
-                      : "red",
+                        ? "green"
+                        : "red",
                 }}
               >
                 {status.toUpperCase()}
@@ -122,8 +128,8 @@ const Orders = () => {
                 {status === "completed"
                   ? "Completed At:"
                   : status === "pending"
-                  ? "Ordered At:"
-                  : "Cancelled At:"}
+                    ? "Ordered At:"
+                    : "Cancelled At:"}
               </strong>{" "}
               {new Date(status === "completed" ? completedAt! : orderedAt!).toLocaleString()}
             </Typography>
@@ -131,7 +137,7 @@ const Orders = () => {
               Items:
             </Typography>
             <List>
-              {items.map((item:any) => (
+              {items.map((item: any) => (
                 <Fragment key={item._id}>
                   <ListItem>
                     <ListItemText
@@ -143,13 +149,45 @@ const Orders = () => {
                 </Fragment>
               ))}
             </List>
+            <Button
+              onClick={async () => {
+                const billData = await axios.get(`${apiUrl}/payments/${orderId}`)
+                const handleDownload = () => {
+                  // Render BillComponent to a string
+                  const content = ReactDOMServer.renderToString(<BillComponent billData={billData.data} items={items} userName={`${firstName} ${lastName}`}/>);
+                  
+                  // Create a temporary DOM container
+                  const tempDiv = document.createElement("div");
+                  tempDiv.innerHTML = content;
+                  document.body.appendChild(tempDiv); // Append temporarily to DOM
+              
+                  const options = {
+                    margin: 1,
+                    filename: `bill_${billData.data.order_id}.pdf`,
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                  };
+              
+                  html2pdf()
+                    .set(options)
+                    .from(tempDiv)
+                    .save()
+                    .then(() => {
+                      document.body.removeChild(tempDiv); // Clean up temporary container
+                    });
+                };
+                handleDownload()
+
+              }}
+            >Download bill</Button>
+
           </Paper>
         );
       })}
     </>
   );
 
-  
+
 
   return (
     <Box sx={{ padding: "20px", maxWidth: "1200px", margin: "auto" }}>

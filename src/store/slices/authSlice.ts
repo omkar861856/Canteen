@@ -16,6 +16,8 @@ export interface AuthState {
     isLoggedIn: boolean;
     otp: string | null;
     otpExpiresAt: string | null; // ISO string for OTP expiration time
+    loading: boolean;
+    error:boolean;
 }
 
 const initialState: AuthState = {
@@ -26,6 +28,8 @@ const initialState: AuthState = {
     isLoggedIn: false,
     otp: null,
     otpExpiresAt: null,
+    loading: false,
+    error: false
 };
 
 // Thunk to handle user signup
@@ -81,12 +85,15 @@ export const logoutUser = createAsyncThunk<void, string>(
 
 export const getIsLoggedInStatus = createAsyncThunk(
     'auth/getIsLoggedInStatus',
-    async (phone, thunkAPI) => {
+    async (_, thunkAPI) => {
+        const state:any = thunkAPI.getState()
+        const {phone} = state.auth
         try {
-            const response = await axios.post(`${apiUrl}/auth/status`, { phone });
-            console.log(response)
+            const response = await axios.get(`${apiUrl}/auth/status/${phone}`);
+            console.log(response.data)
             return response.data.isLoggedIn; // Assuming the API returns an object with the isLoggedIn field
         } catch (error) {
+            console.log(error)
             return thunkAPI.rejectWithValue('Failed to fetch login status');
         }
     }

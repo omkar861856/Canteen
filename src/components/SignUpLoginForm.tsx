@@ -18,7 +18,6 @@ const SignUpLoginForm = () => {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const { isLoggedIn, phone } = useAppSelector(state => state.auth);
-
     const [, setTimer] = useState(30); // Initial timer duration
     const [isButtonVisible] = useState(false); // Control button visibility
     const [otpCount, setOtpCount] = useState(0); // Tracks OTPs sent
@@ -111,8 +110,6 @@ const SignUpLoginForm = () => {
         dispatch({ type: 'RESET_STORE' });
         toast.success('Logoutsuccessful!');
         navigate(`/${kitchenId}/signin`)  };
-
-    
 
     return (
         <div className="form-container">

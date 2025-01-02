@@ -58,9 +58,7 @@ const cartSlice = createSlice({
 
       if (existingItem) {
         // Check if the current quantity is less than the available quantity
-        if (existingItem.quantity < item.quantityAvailable) {
           existingItem.quantity += 1; // Increment the quantity
-        }
       }
     },
     removeFromCart: (state, action: PayloadAction<CartItem>) => {

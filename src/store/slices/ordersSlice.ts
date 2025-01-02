@@ -69,6 +69,7 @@ export const fetchOrdersByPhone = createAsyncThunk(
     const {kitchenId} = store.app;
       try {
           const response = await axios.get(`${apiUrl}/orders/${phone}/${kitchenId}`);
+          console.log(response.data)
           return response.data; 
       } catch (error) {
           throw Error('Failed to fetch orders');
