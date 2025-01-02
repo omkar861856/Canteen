@@ -7,7 +7,6 @@ export interface CartItem {
   price: number;
   quantity: number;
   availability: boolean;
-  quantityAvailable: number;
   image?: string;
   createdAt: string;
   updatedAt: string;
