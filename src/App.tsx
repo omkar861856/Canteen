@@ -11,9 +11,16 @@ import { useEffect } from 'react';
 import { socket } from './Layout';
 import axios from 'axios';
 import { apiUrl } from './Layout';
+import { useAppDispatch } from './store/hooks/hooks';
 
 
 const App = () => {
+  const dispatch = useAppDispatch()
+
+  useEffect(() => {
+    console.log("successfully local store reset")
+    dispatch({ type: 'RESET_STORE' });
+  }, []); 
 
   useEffect(() => {
 
