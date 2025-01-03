@@ -18,11 +18,6 @@ const App = () => {
   const dispatch = useAppDispatch()
 
   useEffect(() => {
-    console.log("successfully local store reset")
-    dispatch({ type: 'RESET_STORE' });
-  }, []); 
-
-  useEffect(() => {
 
     navigator.serviceWorker.ready.then(async (registration) => {
       const subscription = await registration.pushManager.getSubscription();
