@@ -13,7 +13,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // If the user is not authenticated, redirect to the login page
   if (!isLoggedIn) {
     alert("Sending you to signin")
-    return <Navigate to={`/${kitchenId}/signin`} />;
+    alert(`the kitchen id is ${kitchenId}`)
+    return <Navigate to={`${kitchenId}/signin`} />;
   }
   // If the user is authenticated, render the children (protected content)
   return <>{children}</>;
