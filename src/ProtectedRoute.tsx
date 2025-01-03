@@ -14,7 +14,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   if (!isLoggedIn) {
     alert("Sending you to signin")
     alert(`the kitchen id is ${kitchenId}`)
-    return <Navigate to={`${kitchenId}/signin`} />;
+    return <Navigate to={`/${kitchenId}/signin`} replace />;
   }
   // If the user is authenticated, render the children (protected content)
   return <>{children}</>;
