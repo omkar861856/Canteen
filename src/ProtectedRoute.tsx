@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAppSelector } from './store/hooks/hooks';
+import { apiUrl } from './Layout';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,7 +13,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // If the user is not authenticated, redirect to the login page
   if (!isLoggedIn) {
-    return <Navigate to={`/${kitchenId}/signin`} />;
+    return <Navigate to={`${apiUrl}/${kitchenId}/signin`} />;
   }
   // If the user is authenticated, render the children (protected content)
   return <>{children}</>;
